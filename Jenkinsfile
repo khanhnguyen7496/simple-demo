@@ -1,44 +1,30 @@
-pipeline {
-  environment {
-    imagename = "khanhnguyen7496/jenkins-docker"
-    registryCredential = 'nhk-dockerhub'
-    dockerImage = ''
-    repoUrl = 'https://github.com/khanhnguyen7496/simple-demo.git'
-  }
-  agent any
-  stages {
-    stage('Cloning Git') {
-      steps {
-        git([url: 'https://github.com/khanhnguyen7496/simple-demo.git', branch: 'main'])
-      }
+pipeline{
+    agent any
+    options{
+        buildDiscarder(logRotator(numToKeepStr: '5', daysToKeepStr: '5'))
+        timestamps()
     }
-    stage('Building image') {
+    environment{
+        
+        registry = "khanhnguyen7496/jenkins-docker"
+        registryCredential = 'nkh-dockerhub'        
+    }
+    
+    stages{
+       stage('Building image') {
       steps{
         script {
-          dockerImage = docker.build imagename
+          dockerImage = docker.build registry + ":$BUILD_NUMBER"
         }
       }
     }
-    stage('Running image') {
+       stage('Deploy Image') {
       steps{
-        script {
-          sh "docker run ${imagename}:latest"
-        }
-      }
-    }
-    stage('Deploy Image') {
-      steps{
-        script {
-          docker.withRegistry( '', registryCredential ) {
-            dockerImage.push("$BUILD_NUMBER")
-             dockerImage.push('latest')
-            sh """
-            git tag -a ${BUILD_NUMBER} -m "build number ${BUILD_NUMBER}"
-            git push ${repoUrl} ${BUILD_NUMBER}
-            """
+         script {
+            docker.withRegistry( '', registryCredential ) {
+            dockerImage.push()
           }
         }
       }
     }
-  }
 }
